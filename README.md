@@ -6,7 +6,7 @@ Checking yosys
 ![](Day0/yosys.PNG)
 
 Checking ngspice
-![](day0/ngspice.PNG)
+![](Day0/ngspice.PNG)
 
 Checking sta
 ![](Day0/sta.PNG)
