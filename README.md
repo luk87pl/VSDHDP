@@ -565,7 +565,78 @@ When the above steps are repeated for dff_const2.v the logic will be simplified.
 ![](Day3/dff2s.PNG)
 
 
-d
+Example dff_const3.v
+
+Verilog file:
+```
+module dff_const3(input clk, input reset, output reg q);
+reg q1;
+
+always @(posedge clk, posedge reset)
+begin
+        if(reset)
+        begin
+                q <= 1'b1;
+                q1 <= 1'b0;
+        end
+        else
+        begin
+                q1 <= 1'b1;
+                q <= q1;
+        end
+end
+```
+
+So Logic can look like this. We need to check if it has been optimized
+![](Day3/dff3.PNG)
+
+Run check.
+
+```
+$ iverilog dff_const3.v tb_dff_const3.v
+$ ./a.out 
+VCD info: dumpfile tb_dff_const3.vcd opened for output.
+$ gtkwave tb_dff_const3.vcd
+
+```
+![](Day3/dff3_iv.PNG)
+
+Run yosys:
+```
+yosys> read_liberty -lib ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> read_verilog dff_const3.v
+yosys> synth -top dff_const3
+...
+=== dff_const3 ===
+
+   Number of wires:                  4
+   Number of wire bits:              4
+   Number of public wires:           4
+   Number of public wire bits:       4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     $_DFF_PP0_                      1
+     $_DFF_PP1_                      1
+
+yosys> dfflibmap -liberty ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> abc -liberty ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+...
+5.1.2. Re-integrating ABC results.
+ABC RESULTS:   sky130_fd_sc_hd__clkinv_1 cells:        2
+ABC RESULTS:        internal signals:        0
+ABC RESULTS:           input signals:        1
+ABC RESULTS:          output signals:        2
+Removing temp directory.
+
+yosys> show
+```
+![](Day3/dff3s.PNG)
+
+## Seq optimisation unused outputs.
+
+
 
 # Day 4
 
