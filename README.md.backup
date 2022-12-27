@@ -634,7 +634,78 @@ yosys> show
 ```
 ![](Day3/dff3s.PNG)
 
-## 
+## Seq optimisation unused outputs.
+
+Logic that does not affect the output of the circuit will be simplified and eliminated.
+
+In this example we can see how circuit can be optimized.
+
+![](Day3/optcout.PNG)
+
+Now we 
+Check for update couter_opt
+
+```
+module counter_opt (input clk , input reset , output q);
+reg [2:0] count;
+assign q = (count[2:0] == 3'b100);
+
+always @(posedge clk ,posedge reset)
+begin
+        if(reset)
+                count <= 3'b000;
+        else
+                count <= count + 1;
+end
+
+endmodule
+
+```
+
+
+
+```
+yosys> read_liberty -lib ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> read_verilog counter_opt2.v
+yosys> synth -top counter_opt
+...
+=== counter_opt ===
+
+   Number of wires:                  8
+   Number of wire bits:             14
+   Number of public wires:           4
+   Number of public wire bits:       6
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  9
+     $_ANDNOT_                       1
+     $_AND_                          1
+     $_DFF_PP0_                      3
+     $_NOT_                          1
+     $_OR_                           1
+     $_XOR_                          2
+
+We expect 3 flops.
+
+yosys> dfflibmap -liberty ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> abc -liberty ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+...
+7.1.2. Re-integrating ABC results.
+ABC RESULTS:   sky130_fd_sc_hd__nor3b_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__nand2_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__xor2_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__xnor2_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__clkinv_1 cells:        4
+ABC RESULTS:        internal signals:        2
+ABC RESULTS:           input signals:        4
+ABC RESULTS:          output signals:        7
+
+```
+
+![](Day3/opt_couts.PNG)
+
+
 
 # Day 4
 
