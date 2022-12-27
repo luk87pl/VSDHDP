@@ -710,6 +710,207 @@ ABC RESULTS:          output signals:        7
 
 # Day 4
 
+
+## Gate level simulations, Non blocking and blocking assignments, Synthesis-Simulation mismatch.
+
+
+
+What is GLS? (Gate Level Simulation)
+* Running the test bench with Netlist as Design Under Test
+* Netlist is logically same as RTL Code
+* Same Tes Bench will align with the Design
+
+Why GLS?
+* Verify the logical correctness of design after synthesis
+* Ensuring the timing of the design is met.
+* For this GLS needs to run with delay annotation.
+
+
+GLS using IVERILOG
+
+![](Day4/gls.PNG)
+
+Note:
+```
+If the Gate Levwl Models are delay annotated, then we can use GLS for timing validation
+```
+
+Synthesis Simulation Mismatch
+* Missing sensitivity List
+* Blocking vs Non-Blocking Assigments
+* Non Standard Verilog Coding
+
+Missing sensitivity List:
+Simulator works by looking on inputs if inputs don't change output will settle.
+For example in module mux we have always @(sel) but but it is not sensitivity to all imputs but only to sel it should be always @(*) to be sensitivity to all imputs.
+
+Blocking vs Non-Blocking Assigments:
+- Inside always block
+- = ->Blocking
+	- Executes the statments in the order it is written
+	- So the first statement is evaluated before the second statment
+- <= Non Blocking
+
+	-Executes all the RHS when always block is entered adn assigns to LHS
+	- Parallel evaluation
+
+
+
+ternary_operator_mux:
+```
+module ternary_operator_mux (input i0 , input i1 , input sel , output y);
+        assign y = sel?i1:i0;
+        endmodule
+```
+
+Run iverilog:
+```
+$ iverilog ternary_operator_mux.v tb_ternary_operator_mux.v
+$ ./a.out 
+VCD info: dumpfile tb_ternary_operator_mux.vcd opened for output.
+$ gtkwave tb_ternary_operator_mux.vcd
+```
+
+![](Day4/mux1.PNG)
+now run synth for this.
+
+```
+yosys> read_liberty -lib ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> read_verilog ternary_operator_mux.v 
+yosys> synth -top ternary_operator_mux
+...
+=== ternary_operator_mux ===
+
+   Number of wires:                  4
+   Number of wire bits:              4
+   Number of public wires:           4
+   Number of public wire bits:       4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     $_MUX_                          1
+     
+yosys> abc -liberty ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> write_verilog -noattr ternary_operator_mux_net.v
+yosys> show
+```
+
+![](Day4/mux1s.PNG)
+
+Run GLS.
+
+```
+$ iverilog ../my_lib/verilog_model/primitives.v ../my_lib/verilog_model/sky130_fd_sc_hd.v ternary_operator_mux_net.v tb_ternary_operator_mux.v
+ ./a.out 
+VCD info: dumpfile tb_ternary_operator_mux.vcd opened for output.
+$ gtkwave tb_ternary_operator_mux.vcd
+```
+
+![](Day4/mux1sim.PNG)
+
+Test bad_mux:
+```
+module bad_mux (input i0 , input i1 , input sel , output reg y);
+always @ (sel)
+begin
+        if(sel)
+                y <= i1;
+        else
+                y <= i0;
+end
+endmodule
+```
+
+iverilog:
+```
+$ iverilog bad_mux.v tb_bad_mux.v
+$ ./a.out 
+VCD info: dumpfile tb_bad_mux.vcd opened for output.
+$ gtkwave tb_bad_mux.vcd
+```
+
+Looks like it don't woek as mux.
+
+![](Day4/bad_mux1.PNG)
+
+Now run synth.
+```
+yosys> read_liberty -lib ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> read_verilog bad_mux.v
+yosys> synth -top bad_mux
+...
+=== bad_mux ===
+
+   Number of wires:                  4
+   Number of wire bits:              4
+   Number of public wires:           4
+   Number of public wire bits:       4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     $_MUX_                          1
+
+yosys> abc -liberty ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> write_verilog -noattr bad_mux_net.v
+
+
+$ iverilog ../my_lib/verilog_model/primitives.v ../my_lib/verilog_model/sky130_fd_sc_hd.v bad_mux_net.v tb_bad_mux.v
+$ ./a.out 
+VCD info: dumpfile tb_bad_mux.vcd opened for output.
+$ gtkwave tb_bad_mux.vcd
+
+```
+
+![](Day4/bad_mux2.PNG)
+
+Example blocking_caveat:
+
+```
+module blocking_caveat (input a , input b , input  c, output reg d);
+reg x;
+always @ (*)
+begin
+        d = x & c;
+        x = a | b;
+end
+endmodule
+
+```
+![](Day4/blocking1.PNG)
+
+```
+$ iverilog blocking_caveat.v tb_blocking_caveat.v 
+ ./a.out 
+VCD info: dumpfile tb_blocking_caveat.vcd opened for output.
+
+$ gtkwave tb_blocking_caveat.vcd&
+```
+
+Looks like it look for post value 
+![](Day4/blocking2.PNG)
+
+```
+yosys> read_liberty -lib ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib 
+yosys> read_verilog blocking_caveat.v
+yosys> synth -top blocking_caveat
+yosys> abc -liberty ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> write_verilog -noattr blocking_caveat_net.v
+```
+![](Day4/blocking3.PNG)
+
+Run GLS:
+```
+$ iverilog ../my_lib/verilog_model/primitives.v  ../my_lib/verilog_model/sky130_fd_sc_hd.v blocking_caveat_net.v tb_blocking_caveat.v
+$ ./a.out 
+VCD info: dumpfile tb_blocking_caveat.vcd opened for output.
+$ gtkwave tb_blocking_caveat.vcd&
+```
+Compare outputs of verilog and GLS. it is synth sim mismatch by blocking statements.
+![](Day4/blocking4.PNG)
+
+
 # Day 5
 
 # Design Name
