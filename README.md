@@ -1265,7 +1265,167 @@ We need be carefull during coding to avoid this mismach.
 
 ![](Day5/lab6.PNG)
 
+## Looping constructs
+For loop
+- Use inside always block
+- Evaluating expression
 
+Generate for loop
+- Use outside always block
+- Instantiate hardware multiple times
+
+mux_generate example:
+
+```
+module mux_generate (input i0 , input i1, input i2 , input i3 , input [1:0] sel  , output reg y);
+wire [3:0] i_int;
+assign i_int = {i3,i2,i1,i0};
+integer k;
+always @ (*)
+begin
+for(k = 0; k < 4; k=k+1) begin
+        if(k == sel)
+                y = i_int[k];
+end
+end
+endmodule
+```
+
+```
+$ iverilog mux_generate.v tb_mux_generate.v
+$ ./a.out 
+VCD info: dumpfile tb_mux_generate.vcd opened for output.
+$ gtkwave tb_mux_generate.vcd
+```
+
+![](Day5/lab7.PNG)
+
+The output signal coincides with the signal selected by select.
+
+demux_generate example:
+This is an example of the usual for only the file is named confusingly
+
+```
+module demux_generate (output o0 , output o1, output o2 , output o3, output o4, output o5, output o6 , output o7 , input [2:0] sel  , input i);
+reg [7:0]y_int;
+assign {o7,o6,o5,o4,o3,o2,o1,o0} = y_int;
+integer k;
+always @ (*)
+begin
+y_int = 8'b0;
+for(k = 0; k < 8; k++) begin
+        if(k == sel)
+                y_int[k] = i;
+end
+end
+endmodule
+
+```
+
+```
+$ iverilog demux_generate.v tb_demux_generate.v
+$ ./a.out 
+VCD info: dumpfile tb_demux_generate.vcd opened for output.
+$ gtkwave tb_demux_generate.vcd
+```
+
+![](Day5/lab8.PNG)
+
+RCA example:
+RCA is a good example of hardware multiplication.
+
+```
+module fa (input a , input b , input c, output co , output sum);
+        assign {co,sum}  = a + b + c ;
+endmodule
+
+```
+
+```
+module rca (input [7:0] num1 , input [7:0] num2 , output [8:0] sum);
+wire [7:0] int_sum;
+wire [7:0]int_co;
+
+genvar i;
+generate
+        for (i = 1 ; i < 8; i=i+1) begin
+                fa u_fa_1 (.a(num1[i]),.b(num2[i]),.c(int_co[i-1]),.co(int_co[i]),.sum(int_sum[i]));
+        end
+
+endgenerate
+fa u_fa_0 (.a(num1[0]),.b(num2[0]),.c(1'b0),.co(int_co[0]),.sum(int_sum[0]));
+
+
+assign sum[7:0] = int_sum;
+assign sum[8] = int_co[7];
+endmodule
+
+```
+
+```
+$ iverilog fa.v rca.v tb_rca.v
+$ ./a.out 
+VCD info: dumpfile tb_rca.vcd opened for output.
+$ gtkwave tb_rca.vcd
+
+```
+
+
+![](Day5/lab9.PNG)
+
+run yosys
+
+```
+yosys> read_liberty -lib ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> read_verilog fa.v rca.v
+yosys> synth -top rca
+...
+=== design hierarchy ===
+
+   rca                               1
+     fa                              8
+
+   Number of wires:                 69
+   Number of wire bits:            105
+   Number of public wires:          45
+   Number of public wire bits:      81
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 40
+     $_ANDNOT_                       8
+     $_AND_                          8
+     $_OR_                           8
+     $_XNOR_                        16
+
+
+yosys> abc -liberty ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+...
+5.1.2. Re-integrating ABC results.
+ABC RESULTS:   sky130_fd_sc_hd__maj3_1 cells:        1
+ABC RESULTS:   sky130_fd_sc_hd__xor3_1 cells:        1
+ABC RESULTS:        internal signals:        3
+ABC RESULTS:           input signals:        3
+ABC RESULTS:          output signals:        2
+Removing temp directory.
+
+
+yosys> write_verilog -noattr rca_net.v
+yosys> show rca
+
+```
+![](Day5/rca.PNG)
+
+GLS:
+
+```
+$ iverilog ../my_lib/verilog_model/primitives.v  ../my_lib/verilog_model/sky130_fd_sc_hd.v rca_net.v tb_rca.v
+$ ./a.out 
+VCD info: dumpfile tb_rca.vcd opened for output.
+$ gtkwave tb_rca.vcd
+
+```
+![](Day5/rca2.PNG)
 
 ***
 
@@ -1282,6 +1442,119 @@ https://github.com/DantuNandiniDevi/iiitb_freqdiv
 
 ***
 # Day 6
+
+Create copy of  github repo.
+
+```
+$ mkdir my_design
+$ cd my_design/
+$ git clone https://github.com/DantuNandiniDevi/iiitb_freqdiv
+
+```
+
+
+run iverilog
+
+```
+$ iverilog iiitb_freqdiv.v iiitb_freqdiv_tb.v
+$ ./a.out 
+VCD info: dumpfile iiitb_freqdiv_vcd.vcd opened for output.
+$ gtkwave iiitb_freqdiv_vcd.vcd
+
+```
+
+![](Day6/fdivverilog.PNG)
+
+run synth:
+
+```
+yosys> read_liberty -lib ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> read_verilog iiitb_freqdiv.v
+yosys> synth -top iiitb_freqdiv
+...
+3.25. Printing statistics.
+
+=== iiitb_freqdiv ===
+
+   Number of wires:                119
+   Number of wire bits:            140
+   Number of public wires:           6
+   Number of public wire bits:      15
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                126
+     $_ANDNOT_                      47
+     $_AND_                          2
+     $_MUX_                          1
+     $_NAND_                         5
+     $_NOR_                          4
+     $_NOT_                          7
+     $_ORNOT_                        3
+     $_OR_                          19
+     $_SDFF_NN0_                     4
+     $_SDFF_PN0_                     4
+     $_XNOR_                         6
+     $_XOR_                         24
+
+
+...
+
+yosys> dfflibmap -liberty ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> abc -liberty ../lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+yosys> stat
+...
+=== iiitb_freqdiv ===
+
+   Number of wires:                200
+   Number of wire bits:            221
+   Number of public wires:           6
+   Number of public wire bits:      15
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 63
+     sky130_fd_sc_hd__a211oi_1       1
+     sky130_fd_sc_hd__a21oi_1        1
+     sky130_fd_sc_hd__a22oi_1        1
+     sky130_fd_sc_hd__a31oi_1        2
+     sky130_fd_sc_hd__and2_0         2
+     sky130_fd_sc_hd__and3_1         1
+     sky130_fd_sc_hd__and3b_1        1
+     sky130_fd_sc_hd__clkinv_1       8
+     sky130_fd_sc_hd__dfxtp_1        8
+     sky130_fd_sc_hd__lpflow_isobufsrc_1      1
+     sky130_fd_sc_hd__maj3_1         2
+     sky130_fd_sc_hd__nand2_1        4
+     sky130_fd_sc_hd__nand2b_1       2
+     sky130_fd_sc_hd__nor2_1         8
+     sky130_fd_sc_hd__nor2b_1        1
+     sky130_fd_sc_hd__nor3_1         3
+     sky130_fd_sc_hd__nor3b_1        2
+     sky130_fd_sc_hd__nor4_1         1
+     sky130_fd_sc_hd__nor4b_1        1
+     sky130_fd_sc_hd__nor4bb_1       1
+     sky130_fd_sc_hd__o21ai_0        4
+     sky130_fd_sc_hd__o221ai_1       1
+     sky130_fd_sc_hd__o22ai_1        1
+     sky130_fd_sc_hd__o311ai_0       1
+     sky130_fd_sc_hd__o32ai_1        1
+     sky130_fd_sc_hd__xnor2_1        2
+     sky130_fd_sc_hd__xor2_1         2
+...
+yosys> write_verilog iiitb_freqdiv_net.v
+yosys> show
+```
+
+![](Day6/fdiv1.PNG)
+
+```
+$ $ iverilog  -DFUNCTIONAL -DUNIT_DELAY=#1 ../verilog_model/primitives.v ../verilog_model/sky130_fd_sc_hd.v iiitb_freqdiv_net.v iiitb_freqdiv_tb.v
+../verilog_model/sky130_fd_sc_hd.v:74583: syntax error
+I give up.
+
+```
+
 
 ***
 # Day 7
