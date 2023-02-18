@@ -1559,6 +1559,10 @@ $ gtkwave iiitb_freqdiv_vcd.vcd &
 
 ![](Day6/post_1.PNG)
 
+zoom in
+
+![](Day6/post_2.PNG)
+
 ***
 # Day 7
 
