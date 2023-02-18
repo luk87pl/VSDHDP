@@ -1465,6 +1465,10 @@ $ gtkwave iiitb_freqdiv_vcd.vcd
 
 ![](Day6/fdivverilog.PNG)
 
+GLS:
+
+Libraty setup updated based on Mihai description.
+
 run synth:
 
 ```
