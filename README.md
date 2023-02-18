@@ -1523,12 +1523,11 @@ yosys> stat
      sky130_fd_sc_hd__and3b_1        1
      sky130_fd_sc_hd__clkinv_1       8
      sky130_fd_sc_hd__dfxtp_1        8
-     sky130_fd_sc_hd__lpflow_isobufsrc_1      1
      sky130_fd_sc_hd__maj3_1         2
      sky130_fd_sc_hd__nand2_1        4
      sky130_fd_sc_hd__nand2b_1       2
      sky130_fd_sc_hd__nor2_1         8
-     sky130_fd_sc_hd__nor2b_1        1
+     sky130_fd_sc_hd__nor2b_1        2
      sky130_fd_sc_hd__nor3_1         3
      sky130_fd_sc_hd__nor3b_1        2
      sky130_fd_sc_hd__nor4_1         1
@@ -1541,20 +1540,24 @@ yosys> stat
      sky130_fd_sc_hd__o32ai_1        1
      sky130_fd_sc_hd__xnor2_1        2
      sky130_fd_sc_hd__xor2_1         2
+
 ...
 yosys> write_verilog iiitb_freqdiv_net.v
 yosys> show
 ```
 
-![](Day6/fdiv1.PNG)
+![](Day6/fix.PNG)
 
 ```
-$ $ iverilog  -DFUNCTIONAL -DUNIT_DELAY=#1 ../verilog_model/primitives.v ../verilog_model/sky130_fd_sc_hd.v iiitb_freqdiv_net.v iiitb_freqdiv_tb.v
-../verilog_model/sky130_fd_sc_hd.v:74583: syntax error
-I give up.
+$ iverilog  -DFUNCTIONAL -DUNIT_DELAY=#1 ../verilog_model/primitives.v ../verilog_model/sky130_fd_sc_hd.v iiitb_freqdiv_net.v iiitb_freqdiv_tb.v
+
+$ ./a.out 
+VCD info: dumpfile iiitb_freqdiv_vcd.vcd opened for output.
+$ gtkwave iiitb_freqdiv_vcd.vcd &
 
 ```
 
+![](Day6/post_1.PNG)
 
 ***
 # Day 7
